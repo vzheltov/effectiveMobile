@@ -22,5 +22,9 @@ class User(models.Model):
     class Meta:
         db_table = "users"
 
+    @property
+    def is_authenticated(self) -> bool:
+        return True
+
     def __str__(self) -> str:
         return self.email

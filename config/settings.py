@@ -12,18 +12,28 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 
+import environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+env = environ.Env(
+    DEBUG=(bool, True),
+    JWT_TTL_SECONDS=(int, 3600),
+)
+environ.Env.read_env(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-bf6-kwugok&r38!p-6fmvqv7@pn#orrp&%_-5yq7)4x5f#(4^_"
+SECRET_KEY = env(
+    "SECRET_KEY",
+    default="unsafe-development-django-secret-key",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = []
 
@@ -118,3 +128,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+JWT_SECRET = env(
+    "JWT_SECRET",
+    default="unsafe-development-jwt-secret-at-least-32-bytes",
+)
+JWT_TTL_SECONDS = env("JWT_TTL_SECONDS")
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.authentication.authentication.JWTAuthentication",
+    ],
+}

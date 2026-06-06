@@ -9,6 +9,18 @@ def test_user_model_exists():
 
 
 @pytest.mark.django_db
+def test_user_reports_authenticated_state():
+    user = User.objects.create(
+        email="user@example.com",
+        password_hash="hash",
+        first_name="Иван",
+        last_name="Иванов",
+    )
+
+    assert user.is_authenticated is True
+
+
+@pytest.mark.django_db
 def test_user_email_must_be_unique():
     User.objects.create(email="user@example.com")
     with pytest.raises(IntegrityError):

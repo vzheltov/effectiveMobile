@@ -2,6 +2,50 @@ from rest_framework import serializers
 from apps.users.models import User
 
 
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "email",
+            "first_name",
+            "last_name",
+            "middle_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "email",
+            "first_name",
+            "last_name",
+            "middle_name",
+        ]
+
+    def validate_email(self, value):
+        normalized_email = value.strip().lower()
+        email_is_taken = (
+            User.objects.filter(email__iexact=normalized_email)
+            .exclude(id=self.instance.id)
+            .exists()
+        )
+
+        if email_is_taken:
+            raise serializers.ValidationError("A user with this email already exists")
+
+        return normalized_email
+
+
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150)
