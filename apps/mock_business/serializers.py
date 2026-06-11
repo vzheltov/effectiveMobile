@@ -23,6 +23,18 @@ class MockOrderInputSerializer(serializers.Serializer):
         return attrs
 
 
+class MockOrderCreateResponseSerializer(serializers.Serializer):
+    mock = serializers.BooleanField()
+    detail = serializers.CharField()
+    order = MockOrderInputSerializer()
+
+
+class MockOrderActionResponseSerializer(serializers.Serializer):
+    mock = serializers.BooleanField()
+    detail = serializers.CharField()
+    order_id = serializers.IntegerField()
+
+
 class MockProductSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()

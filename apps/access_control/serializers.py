@@ -50,3 +50,8 @@ class UserRolesUpdateSerializer(serializers.Serializer):
         if len(value) != len(set(value)):
             raise serializers.ValidationError("Role IDs must be unique.")
         return value
+
+
+class UserRolesResponseSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField()
+    roles = RoleSerializer(many=True)

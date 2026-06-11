@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
@@ -10,6 +11,7 @@ from apps.access_control.serializers import (
     AccessRuleSerializer,
     BusinessResourceSerializer,
     RoleSerializer,
+    UserRolesResponseSerializer,
     UserRolesUpdateSerializer,
 )
 from apps.access_control.services import (
@@ -67,6 +69,10 @@ class UserRolesView(APIView):
     def get_user(self, user_id):
         return get_object_or_404(User, id=user_id)
 
+    @extend_schema(
+        responses={status.HTTP_200_OK: UserRolesResponseSerializer},
+        operation_id="access_user_roles_retrieve",
+    )
     def get(self, request, user_id):
         user = self.get_user(user_id)
         roles = Role.objects.filter(user_roles__user=user).order_by("id")
@@ -77,6 +83,11 @@ class UserRolesView(APIView):
             }
         )
 
+    @extend_schema(
+        request=UserRolesUpdateSerializer,
+        responses={status.HTTP_200_OK: UserRolesResponseSerializer},
+        operation_id="access_user_roles_replace",
+    )
     def put(self, request, user_id):
         user = self.get_user(user_id)
         serializer = UserRolesUpdateSerializer(data=request.data)

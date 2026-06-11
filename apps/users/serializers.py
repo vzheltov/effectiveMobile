@@ -7,6 +7,20 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
 
+class AccessTokenSerializer(serializers.Serializer):
+    access_token = serializers.CharField()
+    token_type = serializers.CharField()
+    expires_in = serializers.IntegerField()
+
+
+class RegistrationResponseSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    email = serializers.EmailField()
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    middle_name = serializers.CharField()
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

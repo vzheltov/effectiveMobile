@@ -1,4 +1,5 @@
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +14,8 @@ from apps.access_control.services import (
 )
 from apps.mock_business.data import MOCK_ORDERS, MOCK_PRODUCTS
 from apps.mock_business.serializers import (
+    MockOrderActionResponseSerializer,
+    MockOrderCreateResponseSerializer,
     MockOrderInputSerializer,
     MockOrderSerializer,
     MockProductSerializer,
@@ -66,6 +69,10 @@ def filter_for_read_scope(*, items, user, resource_code):
 class OrderListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={status.HTTP_200_OK: MockOrderSerializer(many=True)},
+        operation_id="mock_order_list",
+    )
     def get(self, request):
         orders = filter_for_read_scope(
             items=MOCK_ORDERS,
@@ -74,6 +81,11 @@ class OrderListCreateView(APIView):
         )
         return Response(MockOrderSerializer(orders, many=True).data)
 
+    @extend_schema(
+        request=MockOrderInputSerializer,
+        responses={status.HTTP_200_OK: MockOrderCreateResponseSerializer},
+        operation_id="mock_order_create",
+    )
     def post(self, request):
         ensure_permission(
             user=request.user,
@@ -98,6 +110,10 @@ class OrderDetailView(APIView):
     def get_order(self, order_id):
         return get_mock_object(MOCK_ORDERS, order_id)
 
+    @extend_schema(
+        responses={status.HTTP_200_OK: MockOrderSerializer},
+        operation_id="mock_order_retrieve",
+    )
     def get(self, request, order_id):
         order = self.get_order(order_id)
         ensure_permission(
@@ -108,6 +124,11 @@ class OrderDetailView(APIView):
         )
         return Response(MockOrderSerializer(order).data)
 
+    @extend_schema(
+        request=MockOrderInputSerializer,
+        responses={status.HTTP_200_OK: MockOrderActionResponseSerializer},
+        operation_id="mock_order_update",
+    )
     def patch(self, request, order_id):
         order = self.get_order(order_id)
         ensure_permission(
@@ -129,6 +150,11 @@ class OrderDetailView(APIView):
             }
         )
 
+    @extend_schema(
+        request=None,
+        responses={status.HTTP_200_OK: MockOrderActionResponseSerializer},
+        operation_id="mock_order_delete",
+    )
     def delete(self, request, order_id):
         order = self.get_order(order_id)
         ensure_permission(
@@ -149,6 +175,10 @@ class OrderDetailView(APIView):
 class ProductListView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        responses={status.HTTP_200_OK: MockProductSerializer(many=True)},
+        operation_id="mock_product_list",
+    )
     def get(self, request):
         products = filter_for_read_scope(
             items=MOCK_PRODUCTS,
