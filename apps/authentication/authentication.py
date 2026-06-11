@@ -1,4 +1,6 @@
 import jwt
+from uuid import UUID
+
 from django.conf import settings
 from django.utils import timezone
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
@@ -32,12 +34,18 @@ class JWTAuthentication(BaseAuthentication):
             raise AuthenticationFailed("Invalid token type")
 
         try:
-            user = User.objects.get(id=payload["sub"], is_active=True)
+            user_id = UUID(str(payload["sub"]))
+            session_jti = UUID(str(payload["jti"]))
+        except (TypeError, ValueError) as error:
+            raise AuthenticationFailed("Invalid or expired token") from error
+
+        try:
+            user = User.objects.get(id=user_id, is_active=True)
             session = AuthSession.objects.get(
                 user=user,
-                jti=payload["jti"],
+                jti=session_jti,
             )
-        except (User.DoesNotExist, AuthSession.DoesNotExist, ValueError) as error:
+        except (User.DoesNotExist, AuthSession.DoesNotExist) as error:
             raise AuthenticationFailed("Invalid or expired token") from error
 
         if session.revoked_at is not None or session.expires_at <= timezone.now():

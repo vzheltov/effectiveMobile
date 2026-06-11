@@ -92,3 +92,26 @@ def test_login_rejects_inactive_user():
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid email or password"
     assert AuthSession.objects.exists() is False
+
+
+@pytest.mark.django_db
+def test_login_rejects_corrupted_password_hash():
+    User.objects.create(
+        email="user@example.com",
+        password_hash="not-a-bcrypt-hash",
+        first_name="Иван",
+        last_name="Иванов",
+    )
+
+    response = APIClient().post(
+        "/api/v1/auth/login/",
+        {
+            "email": "user@example.com",
+            "password": "StrongPass123!",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
+    assert not AuthSession.objects.exists()

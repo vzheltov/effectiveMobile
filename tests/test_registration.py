@@ -70,3 +70,52 @@ def test_registration_rejects_different_passwords():
     assert response.status_code == 400
     assert User.objects.exists() is False
     assert "password_repeat" in response.json()
+
+
+@pytest.mark.django_db
+def test_registration_normalizes_email():
+    response = APIClient().post(
+        "/api/v1/auth/register/",
+        {
+            "email": "  IVAN@Example.COM  ",
+            "first_name": "Иван",
+            "last_name": "Иванов",
+            "password": "StrongPass123!",
+            "password_repeat": "StrongPass123!",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 201
+    assert User.objects.get().email == "ivan@example.com"
+
+
+@pytest.mark.django_db
+def test_registration_rejects_short_password():
+    response = APIClient().post(
+        "/api/v1/auth/register/",
+        {
+            "email": "ivan@example.com",
+            "first_name": "Иван",
+            "last_name": "Иванов",
+            "password": "short",
+            "password_repeat": "short",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "password" in response.json()
+    assert not User.objects.exists()
+
+
+@pytest.mark.django_db
+def test_registration_rejects_malformed_json():
+    response = APIClient().post(
+        "/api/v1/auth/register/",
+        data="{",
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert not User.objects.exists()

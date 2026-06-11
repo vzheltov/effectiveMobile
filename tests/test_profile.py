@@ -80,3 +80,38 @@ def test_user_can_update_own_profile():
     assert user.first_name == "Пётр"
     assert user.is_active is True
     assert user.password_hash != "stolen"
+
+
+@pytest.mark.django_db
+def test_profile_update_rejects_email_owned_by_another_user():
+    user = User.objects.create(
+        email="user@example.com",
+        password_hash=hash_password("StrongPass123!"),
+        first_name="Иван",
+        last_name="Иванов",
+    )
+    User.objects.create(
+        email="other@example.com",
+        password_hash="hash",
+        first_name="Пётр",
+        last_name="Петров",
+    )
+    login_response = APIClient().post(
+        "/api/v1/auth/login/",
+        {
+            "email": "user@example.com",
+            "password": "StrongPass123!",
+        },
+        format="json",
+    )
+
+    response = APIClient().patch(
+        "/api/v1/users/me/",
+        {"email": "OTHER@example.com"},
+        format="json",
+        HTTP_AUTHORIZATION=f"Bearer {login_response.json()['access_token']}",
+    )
+
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.email == "user@example.com"
