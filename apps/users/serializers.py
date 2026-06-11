@@ -48,14 +48,8 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         normalized_email = value.strip().lower()
-        email_is_taken = (
-            User.objects.filter(email__iexact=normalized_email)
-            .exclude(id=self.instance.id)
-            .exists()
-        )
-
-        if email_is_taken:
-            raise serializers.ValidationError("A user with this email already exists")
+        if normalized_email != self.instance.email:
+            raise serializers.ValidationError("Email cannot be changed")
 
         return normalized_email
 
@@ -77,6 +71,11 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError({"password_repeat": "Passwords do not match"})
 
         return data
+
+    def validate_password(self, value):
+        if len(value.encode("utf-8")) > 72:
+            raise serializers.ValidationError("Password must not exceed 72 bytes")
+        return value
 
     def validate_email(self, value):
         normalized_email = value.strip().lower()

@@ -1,5 +1,5 @@
 import pytest
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from apps.users.models import User
 from uuid import UUID
 
@@ -25,6 +25,14 @@ def test_user_email_must_be_unique():
     User.objects.create(email="user@example.com")
     with pytest.raises(IntegrityError):
         User.objects.create(email="user@example.com")
+
+
+@pytest.mark.django_db
+def test_user_email_must_be_unique_ignoring_case():
+    User.objects.create(email="user@example.com")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        User.objects.create(email="USER@example.com")
 
 
 @pytest.mark.django_db

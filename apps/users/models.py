@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.db.models.functions import Lower
 
 
 # Create your models here.
@@ -21,6 +22,12 @@ class User(models.Model):
 
     class Meta:
         db_table = "users"
+        constraints = [
+            models.UniqueConstraint(
+                Lower("email"),
+                name="unique_user_email_ci",
+            )
+        ]
 
     @property
     def is_authenticated(self) -> bool:

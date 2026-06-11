@@ -31,6 +31,25 @@ class LastAdministratorError(ValueError):
     pass
 
 
+def ensure_not_last_active_administrator(*, user: User) -> None:
+    if not user.is_active:
+        return
+
+    admin_role = Role.objects.filter(code="admin").first()
+    if admin_role is None:
+        return
+
+    active_admin_assignments = list(
+        UserRole.objects.select_for_update().filter(
+            role=admin_role,
+            user__is_active=True,
+        )
+    )
+    target_is_admin = any(assignment.user_id == user.id for assignment in active_admin_assignments)
+    if target_is_admin and len(active_admin_assignments) == 1:
+        raise LastAdministratorError("The last active administrator cannot be removed.")
+
+
 @transaction.atomic
 def replace_user_roles(*, user: User, role_ids: list[int]) -> list[Role]:
     requested_ids = set(role_ids)
@@ -42,18 +61,8 @@ def replace_user_roles(*, user: User, role_ids: list[int]) -> list[Role]:
 
     admin_role = Role.objects.filter(code="admin").first()
     removes_admin = admin_role is not None and admin_role.id not in requested_ids
-    if removes_admin and user.is_active:
-        active_admin_assignments = list(
-            UserRole.objects.select_for_update().filter(
-                role=admin_role,
-                user__is_active=True,
-            )
-        )
-        target_is_admin = any(
-            assignment.user_id == user.id for assignment in active_admin_assignments
-        )
-        if target_is_admin and len(active_admin_assignments) == 1:
-            raise LastAdministratorError("The last active administrator cannot be removed.")
+    if removes_admin:
+        ensure_not_last_active_administrator(user=user)
 
     UserRole.objects.filter(user=user).exclude(role_id__in=requested_ids).delete()
     UserRole.objects.bulk_create(

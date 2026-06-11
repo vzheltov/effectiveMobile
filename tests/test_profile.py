@@ -65,7 +65,6 @@ def test_user_can_update_own_profile():
     response = client.patch(
         "/api/v1/users/me/",
         {
-            "email": "NEW@example.com",
             "first_name": "Пётр",
             "is_active": False,
             "password_hash": "stolen",
@@ -76,7 +75,7 @@ def test_user_can_update_own_profile():
 
     assert response.status_code == 200
     user.refresh_from_db()
-    assert user.email == "new@example.com"
+    assert user.email == "user@example.com"
     assert user.first_name == "Пётр"
     assert user.is_active is True
     assert user.password_hash != "stolen"
@@ -108,6 +107,35 @@ def test_profile_update_rejects_email_owned_by_another_user():
     response = APIClient().patch(
         "/api/v1/users/me/",
         {"email": "OTHER@example.com"},
+        format="json",
+        HTTP_AUTHORIZATION=f"Bearer {login_response.json()['access_token']}",
+    )
+
+    assert response.status_code == 400
+    user.refresh_from_db()
+    assert user.email == "user@example.com"
+
+
+@pytest.mark.django_db
+def test_profile_update_rejects_new_email():
+    user = User.objects.create(
+        email="user@example.com",
+        password_hash=hash_password("StrongPass123!"),
+        first_name="Иван",
+        last_name="Иванов",
+    )
+    login_response = APIClient().post(
+        "/api/v1/auth/login/",
+        {
+            "email": "user@example.com",
+            "password": "StrongPass123!",
+        },
+        format="json",
+    )
+
+    response = APIClient().patch(
+        "/api/v1/users/me/",
+        {"email": "renamed@example.com"},
         format="json",
         HTTP_AUTHORIZATION=f"Bearer {login_response.json()['access_token']}",
     )

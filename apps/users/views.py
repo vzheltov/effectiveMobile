@@ -1,9 +1,12 @@
+from django.db import IntegrityError
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.access_control.services import LastAdministratorError
 from apps.authentication.services import login_user, revoke_session
 from apps.users.serializers import (
     AccessTokenSerializer,
@@ -85,7 +88,10 @@ class MeView(APIView):
         operation_id="user_profile_delete",
     )
     def delete(self, request):
-        deactivate_user(request.user)
+        try:
+            deactivate_user(request.user)
+        except LastAdministratorError as error:
+            raise ValidationError({"detail": str(error)}) from error
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -101,7 +107,10 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = register_user(**serializer.validated_data)
+        try:
+            user = register_user(**serializer.validated_data)
+        except IntegrityError as error:
+            raise ValidationError({"email": "A user with this email already exists"}) from error
 
         return Response(
             {

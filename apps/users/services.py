@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.utils import timezone
 
+from apps.access_control.services import ensure_not_last_active_administrator
 from apps.authentication.services import hash_password
 from apps.users.models import User
 
@@ -18,6 +19,8 @@ def register_user(**validated_data) -> User:
 
 @transaction.atomic
 def deactivate_user(user: User) -> None:
+    ensure_not_last_active_administrator(user=user)
+
     deactivated_at = timezone.now()
     user.is_active = False
     user.deleted_at = deactivated_at

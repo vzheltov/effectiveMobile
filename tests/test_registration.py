@@ -1,4 +1,7 @@
+from unittest.mock import patch
+
 import pytest
+from django.db import IntegrityError
 from rest_framework.test import APIClient
 
 from apps.users.models import User
@@ -54,6 +57,28 @@ def test_registration_rejects_duplicate_email():
 
 
 @pytest.mark.django_db
+def test_registration_handles_concurrent_duplicate_email():
+    with patch(
+        "apps.users.views.register_user",
+        side_effect=IntegrityError,
+    ):
+        response = APIClient().post(
+            "/api/v1/auth/register/",
+            {
+                "email": "ivan@example.com",
+                "first_name": "Иван",
+                "last_name": "Иванов",
+                "password": "StrongPass123!",
+                "password_repeat": "StrongPass123!",
+            },
+            format="json",
+        )
+
+    assert response.status_code == 400
+    assert "email" in response.json()
+
+
+@pytest.mark.django_db
 def test_registration_rejects_different_passwords():
     response = APIClient().post(
         "/api/v1/auth/register/",
@@ -100,6 +125,27 @@ def test_registration_rejects_short_password():
             "last_name": "Иванов",
             "password": "short",
             "password_repeat": "short",
+        },
+        format="json",
+    )
+
+    assert response.status_code == 400
+    assert "password" in response.json()
+    assert not User.objects.exists()
+
+
+@pytest.mark.django_db
+def test_registration_rejects_password_longer_than_bcrypt_limit():
+    password = "A" * 73
+
+    response = APIClient().post(
+        "/api/v1/auth/register/",
+        {
+            "email": "ivan@example.com",
+            "first_name": "Иван",
+            "last_name": "Иванов",
+            "password": password,
+            "password_repeat": password,
         },
         format="json",
     )
